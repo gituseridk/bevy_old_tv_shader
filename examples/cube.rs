@@ -56,7 +56,7 @@ fn main() {
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
-                    resolution: Vec2::splat(400.0).into(),
+                    resolution: (400, 400).into(),
                     title: "cube".into(),
                     ..default()
                 }),
