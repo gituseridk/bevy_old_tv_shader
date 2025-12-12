@@ -16,13 +16,13 @@ fn main() {
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
-                    resolution: Vec2::splat(400.0).into(),
+                    resolution: (400, 400).into(),
                     title: "text".into(),
                     ..default()
                 }),
                 ..default()
             }),
-            FrameTimeDiagnosticsPlugin,
+            FrameTimeDiagnosticsPlugin::default(),
             OldTvPlugin,
         ))
         .add_systems(Startup, (move || use_3d_camera).pipe(setup))
@@ -68,7 +68,7 @@ fn setup(In(use_3d_camera): In<bool>, mut commands: Commands) {
             ..default()
         },
         // Set the justification of the Text
-        TextLayout::new_with_justify(JustifyText::Center),
+        TextLayout::new_with_justify(Justify::Center),
         // Set the style of the Node itself.
         Node {
             position_type: PositionType::Absolute,

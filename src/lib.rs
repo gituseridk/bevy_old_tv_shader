@@ -6,17 +6,18 @@ use bevy::{
     core_pipeline::{
         core_2d::graph::{Core2d, Node2d},
         core_3d::graph::{Core3d, Node3d},
-        fullscreen_vertex_shader::fullscreen_shader_vertex_state,
+        FullscreenShader,
     },
     ecs::query::QueryItem,
     prelude::*,
     render::{
+        camera::ExtractedCamera,
         extract_component::{
             ComponentUniforms, DynamicUniformIndex, ExtractComponent, ExtractComponentPlugin,
             UniformComponentPlugin,
         },
         render_graph::{
-            NodeRunError, RenderGraphApp, RenderGraphContext, RenderLabel, ViewNode, ViewNodeRunner,
+            NodeRunError, RenderGraphContext, RenderGraphExt, RenderLabel, ViewNode, ViewNodeRunner,
         },
         render_resource::{
             binding_types::{sampler, texture_2d, uniform_buffer},
@@ -28,7 +29,7 @@ use bevy::{
     },
 };
 #[cfg(feature = "ui")]
-use bevy_ui::graph::NodeUi;
+use bevy_ui_render::graph::NodeUi;
 
 /// Useful splat imports
 pub mod prelude {
@@ -115,6 +116,7 @@ impl ViewNode for OldTvNode {
     //
     // This query will only run on the view entity
     type ViewQuery = (
+        &'static ExtractedCamera,
         &'static ViewTarget,
         // This makes sure the node only runs on cameras with the OldTvSettings component
         &'static OldTvSettings,
@@ -134,7 +136,7 @@ impl ViewNode for OldTvNode {
         &self,
         _graph: &mut RenderGraphContext,
         render_context: &mut RenderContext,
-        (view_target, _post_process_settings, settings_index): QueryItem<Self::ViewQuery>,
+        (camera, view_target, _post_process_settings, settings_index): QueryItem<Self::ViewQuery>,
         world: &World,
     ) -> Result<(), NodeRunError> {
         // Get the pipeline resource that contains the global data we need
@@ -196,12 +198,16 @@ impl ViewNode for OldTvNode {
                 view: post_process.destination,
                 resolve_target: None,
                 ops: Operations::default(),
+                depth_slice: None,
             })],
             depth_stencil_attachment: None,
             timestamp_writes: None,
             occlusion_query_set: None,
         });
 
+        if let Some(viewport) = camera.viewport.as_ref() {
+            render_pass.set_camera_viewport(viewport);
+        }
         // This is mostly just wgpu boilerplate for drawing a fullscreen triangle,
         // using the pipeline/bind_group created above
         render_pass.set_render_pipeline(pipeline);
@@ -244,34 +250,40 @@ impl FromWorld for OldTvPipeline {
             ),
         );
 
-        // We can create the sampler here since it won't change at runtime and doesn't depend on the view
+        // We can create the sampler here since it won't change at runtime and
+        // doesn't depend on the view.
         let sampler = render_device.create_sampler(&SamplerDescriptor::default());
 
-        // Get the shader handle
+        // Get the shader handle.
         let shader = world.load_asset("embedded://bevy_old_tv_shader/old_tv.wgsl");
+        let vertex_state = world.resource::<FullscreenShader>().to_vertex_state();
 
         let pipeline_id = world
             .resource_mut::<PipelineCache>()
-            // This will add the pipeline to the cache and queue its creation
+            // This will add the pipeline to the cache and queue its creation.
             .queue_render_pipeline(RenderPipelineDescriptor {
                 label: Some("old_tv_pipeline".into()),
                 layout: vec![layout.clone()],
-                // This will setup a fullscreen triangle for the vertex state
-                vertex: fullscreen_shader_vertex_state(),
+                // This will setup a fullscreen triangle for the vertex state.
+                // In Bevy 0.17, fullscreen vertex shaders don't require vertex
+                // buffers.
+                vertex: vertex_state,
                 fragment: Some(FragmentState {
                     shader,
                     shader_defs: vec![],
                     // Make sure this matches the entry point of your shader.
                     // It can be anything as long as it matches here and in the shader.
-                    entry_point: "fragment".into(),
+                    entry_point: Some("fragment".into()),
                     targets: vec![Some(ColorTargetState {
                         format: TextureFormat::bevy_default(),
                         blend: None,
                         write_mask: ColorWrites::ALL,
                     })],
                 }),
-                // All of the following properties are not important for this effect so just use the default values.
-                // This struct doesn't have the Default trait implemented because not all fields can have a default value.
+                // All of the following properties are not important for this
+                // effect so just use the default values. This struct doesn't
+                // have the Default trait implemented because not all fields can
+                // have a default value.
                 primitive: PrimitiveState::default(),
                 depth_stencil: None,
                 multisample: MultisampleState::default(),
@@ -291,6 +303,9 @@ impl FromWorld for OldTvPipeline {
 ///
 /// Add this component to effect a camera. These values are passed to the shader
 /// and can be updated dynamically by querying for this component.
+// These parameters are extracted and used, so the `dead_code` warning is a
+// false positive.
+#[allow(dead_code, unused)]
 #[derive(Component, Default, Clone, Copy, ExtractComponent, ShaderType, Reflect)]
 pub struct OldTvSettings {
     /// Rounds the corners [0, 1]
