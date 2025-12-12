@@ -11,6 +11,7 @@ use bevy::{
     ecs::query::QueryItem,
     prelude::*,
     render::{
+        camera::ExtractedCamera,
         extract_component::{
             ComponentUniforms, DynamicUniformIndex, ExtractComponent, ExtractComponentPlugin,
             UniformComponentPlugin,
@@ -115,6 +116,7 @@ impl ViewNode for OldTvNode {
     //
     // This query will only run on the view entity
     type ViewQuery = (
+        &'static ExtractedCamera,
         &'static ViewTarget,
         // This makes sure the node only runs on cameras with the OldTvSettings component
         &'static OldTvSettings,
@@ -134,7 +136,7 @@ impl ViewNode for OldTvNode {
         &self,
         _graph: &mut RenderGraphContext,
         render_context: &mut RenderContext,
-        (view_target, _post_process_settings, settings_index): QueryItem<Self::ViewQuery>,
+        (camera, view_target, _post_process_settings, settings_index): QueryItem<Self::ViewQuery>,
         world: &World,
     ) -> Result<(), NodeRunError> {
         // Get the pipeline resource that contains the global data we need
@@ -202,6 +204,9 @@ impl ViewNode for OldTvNode {
             occlusion_query_set: None,
         });
 
+        if let Some(viewport) = camera.viewport.as_ref() {
+            render_pass.set_camera_viewport(viewport);
+        }
         // This is mostly just wgpu boilerplate for drawing a fullscreen triangle,
         // using the pipeline/bind_group created above
         render_pass.set_render_pipeline(pipeline);
@@ -291,6 +296,9 @@ impl FromWorld for OldTvPipeline {
 ///
 /// Add this component to effect a camera. These values are passed to the shader
 /// and can be updated dynamically by querying for this component.
+// These parameters are extracted and used, so the `dead_code` warning is a
+// false positive.
+#[allow(dead_code, unused)]
 #[derive(Component, Default, Clone, Copy, ExtractComponent, ShaderType, Reflect)]
 pub struct OldTvSettings {
     /// Rounds the corners [0, 1]
