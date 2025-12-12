@@ -5,7 +5,7 @@
 
 use bevy::prelude::*;
 #[cfg(not(target_arch = "wasm32"))]
-use bevy::sprite::{Wireframe2dConfig, Wireframe2dPlugin};
+use bevy::sprite_render::{Wireframe2dConfig, Wireframe2dPlugin};
 use bevy_old_tv_shader::prelude::*;
 
 fn main() {
@@ -13,7 +13,7 @@ fn main() {
     app.add_plugins((
         DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                resolution: Vec2::splat(400.0).into(),
+                resolution: (400, 400).into(),
                 title: "2d".into(),
                 ..default()
             }),
@@ -22,9 +22,8 @@ fn main() {
         OldTvPlugin,
     ))
     .add_plugins((
-        // DefaultPlugins,
         #[cfg(not(target_arch = "wasm32"))]
-        Wireframe2dPlugin,
+        Wireframe2dPlugin::default(),
     ))
     .add_systems(Startup, setup);
     #[cfg(not(target_arch = "wasm32"))]
