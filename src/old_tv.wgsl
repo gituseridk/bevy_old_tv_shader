@@ -97,4 +97,5 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
 
     return color;
     // return vec4(ratio/ 2, 0, 0, 1);
+    // return vec4(in.uv, 0, 1);
 }

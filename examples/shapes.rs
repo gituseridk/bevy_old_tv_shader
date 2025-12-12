@@ -24,7 +24,7 @@ fn main() {
     .add_plugins((
         // DefaultPlugins,
         #[cfg(not(target_arch = "wasm32"))]
-        Wireframe2dPlugin,
+        Wireframe2dPlugin::default(),
     ))
     .add_systems(Startup, setup);
     #[cfg(not(target_arch = "wasm32"))]

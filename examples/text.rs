@@ -22,7 +22,7 @@ fn main() {
                 }),
                 ..default()
             }),
-            FrameTimeDiagnosticsPlugin,
+            FrameTimeDiagnosticsPlugin::default(),
             OldTvPlugin,
         ))
         .add_systems(Startup, (move || use_3d_camera).pipe(setup))
