@@ -76,7 +76,7 @@ impl Plugin for OldTvPlugin {
         render_app
             .add_render_graph_edges(
                 Core2d,
-                (Node2d::EndMainPass, OldTvLabel, Node2d::Tonemapping),
+                (Node2d::Tonemapping, OldTvLabel, Node2d::EndMainPassPostProcessing),
             )
             .add_render_graph_edges(
                 Core3d,
@@ -177,7 +177,7 @@ impl ViewNode for OldTvNode {
         // is to make sure you get it during the node execution.
         let bind_group = render_context.render_device().create_bind_group(
             "old_tv_bind_group",
-            &old_tv_pipeline.layout,
+            &pipeline_cache.get_bind_group_layout(&old_tv_pipeline.layout),
             // It's important for this to match the BindGroupLayout defined in the OldTvPipeline
             &BindGroupEntries::sequential((
                 // Make sure to use the source view
@@ -224,7 +224,7 @@ impl ViewNode for OldTvNode {
 // This contains global data used by the render pipeline. This will be created once on startup.
 #[derive(Resource)]
 struct OldTvPipeline {
-    layout: BindGroupLayout,
+    layout: BindGroupLayoutDescriptor,
     sampler: Sampler,
     pipeline_id: CachedRenderPipelineId,
 }
@@ -234,7 +234,7 @@ impl FromWorld for OldTvPipeline {
         let render_device = world.resource::<RenderDevice>();
 
         // We need to define the bind group layout used for our pipeline
-        let layout = render_device.create_bind_group_layout(
+        let layout = BindGroupLayoutDescriptor::new(
             "old_tv_bind_group_layout",
             &BindGroupLayoutEntries::sequential(
                 // The layout entries will only be visible in the fragment stage
